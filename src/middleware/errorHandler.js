@@ -1,11 +1,29 @@
+import createHttpError from 'http-errors';
+
+const { HttpError } = createHttpError;
+
 export const errorHandler = (err, req, res, next) => {
-  console.error(err);
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const isHttpError = err instanceof HttpError;
+
+  const status = isHttpError ? err.status : 500;
 
   const isProd = process.env.NODE_ENV === 'production';
 
-  res.status(500).json({
-    message: isProd
+  const message = isHttpError
+    ? err.message
+    : isProd
       ? 'Something went wrong. Please try again later.'
-      : err.message,
+      : err.message;
+
+  if (!isHttpError) {
+    console.error(err);
+  }
+
+  return res.status(status).json({
+    message,
   });
 };
